@@ -18,19 +18,26 @@ from django.db.models import Q
 User = get_user_model()
 
 class TicketAPIView(generics.ListCreateAPIView):
+    '''This is create api where admin only can create the ticket where in assignedTo field username of assign to user needed '''
     serializer_class = TicketSerializer
     permissions_classes = (IsAuthenticated,)
 
     def post(self, request):
         if self.request.user.role == 'admin':
             serializer = self.serializer_class(data=request.data)
+            user_to_be_assign = request.data.get('assignedTo')
+            if User.objects.filter(username=user_to_be_assign).exists():
+                user = User.objects.get(username=user_to_be_assign)
+            else:
+                return Response({"Message":"User not found"}, status=status.HTTP_404_NOT_FOUND)
             serializer.is_valid(raise_exception=True)
-            serializer.save()
+            serializer.save(assignedTo=user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
             return Response({"Message":"You are not allowed"}, status=status.HTTP_401_UNAUTHORIZED)
 
 class TicketAPILISTView(generics.ListAPIView):
+    '''this code is for get the queryset'''
     serializer_class = TicketSerializer
     permissions_classes = (IsAuthenticated,)
 
@@ -55,6 +62,7 @@ class TicketAPILISTView(generics.ListAPIView):
         return qs
 
 class markAsClosedView(generics.UpdateAPIView):
+    '''this is for updating the queryset where only admin and assigned user oly can update as close'''
     serializer_class = TicketSerializer
     permissions_classes = (IsAuthenticated,)
 
@@ -87,6 +95,7 @@ class markAsClosedView(generics.UpdateAPIView):
             return Response({"Message":"You are not allowed"}, status=status.HTTP_401_UNAUTHORIZED)
 
 class DeleteView(generics.RetrieveUpdateDestroyAPIView):
+    '''This is for delete the query where admin provides ticketID of the ticket and then it deletes the query set'''
     serializer_class = TicketSerializer
     permissions_classes = (IsAuthenticated,)
 
